@@ -24,27 +24,42 @@ package org.pentaho.di.ui.spoon.delegates;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.MessageBox;
 import org.eclipse.swt.widgets.Shell;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.KettleAttributeInterface;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.gui.Point;
+import org.pentaho.di.core.row.RowMetaInterface;
 import org.pentaho.di.i18n.BaseMessages;
 import org.pentaho.di.trans.Partitioner;
 import org.pentaho.di.trans.TransHopMeta;
 import org.pentaho.di.trans.TransMeta;
+import org.pentaho.di.trans.step.RowDistributionInterface;
+import org.pentaho.di.trans.step.StepDataInterface;
 import org.pentaho.di.trans.step.StepDialogInterface;
 import org.pentaho.di.trans.step.StepErrorMeta;
+import org.pentaho.di.trans.step.StepInjectionMetaEntry;
 import org.pentaho.di.trans.step.StepMeta;
+import org.pentaho.di.trans.step.StepMetaInjectionInterface;
 import org.pentaho.di.trans.step.StepMetaInterface;
 import org.pentaho.di.trans.step.StepPartitioningMeta;
+import org.pentaho.di.trans.steps.csvinput.CsvInputMeta;
+import org.pentaho.di.trans.steps.filterrows.FilterRowsMeta;
+import org.pentaho.di.trans.steps.metainject.MetaInjectMeta;
+import org.pentaho.di.trans.steps.metainject.SourceStepField;
+import org.pentaho.di.trans.steps.metainject.TargetStepAttribute;
 import org.pentaho.di.ui.core.dialog.ErrorDialog;
 import org.pentaho.di.ui.core.gui.GUIResource;
 import org.pentaho.di.ui.spoon.Spoon;
 import org.pentaho.di.ui.trans.step.StepErrorMetaDialog;
+import org.pentaho.reporting.engine.classic.core.metadata.ResourceReference;
 
 public class SpoonStepsDelegate extends SpoonDelegate {
   private static Class<?> PKG = Spoon.class; // for i18n purposes, needed by Translator2!!
@@ -156,6 +171,27 @@ public class SpoonStepsDelegate extends SpoonDelegate {
 
         stepMeta.setName( stepname );
 
+        if ( !stepname.equals( name ) ) {
+          for ( int i = 0; i < transMeta.nrTransHops(); i++ ) {
+            TransHopMeta hopMeta = transMeta.getTransHop( i );
+            if ( hopMeta.getFromStep().equals( stepMeta ) ) {
+              StepMeta toStepMeta = hopMeta.getToStep();
+              if ( toStepMeta.getStepMetaInterface() instanceof MetaInjectMeta ) {
+                MetaInjectMeta toMeta = (MetaInjectMeta) toStepMeta.getStepMetaInterface();
+                Map<TargetStepAttribute, SourceStepField> sourceMapping = toMeta.getTargetSourceMapping();
+                for ( Entry<TargetStepAttribute, SourceStepField> entry : sourceMapping.entrySet() ) {
+                  SourceStepField value = entry.getValue();
+                  if ( value.getStepname().equals( name ) ) {
+                    value.setStepname( stepname );
+                  }
+                }
+
+              }
+
+            }
+          }
+        }
+        
         //
         // OK, so the step has changed...
         // Backup the situation for undo/redo
