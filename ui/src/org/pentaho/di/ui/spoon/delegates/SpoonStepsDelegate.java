@@ -168,29 +168,11 @@ public class SpoonStepsDelegate extends SpoonDelegate {
         if ( !stepname.equals( name ) ) {
           refresh = true;
         }
-
+        
+        StepMeta newStepMeta = (StepMeta) stepMeta.clone();
+        newStepMeta.setName( stepname );
+        transMeta.NotifyAllListeners( stepMeta, newStepMeta );
         stepMeta.setName( stepname );
-
-        if ( !stepname.equals( name ) ) {
-          for ( int i = 0; i < transMeta.nrTransHops(); i++ ) {
-            TransHopMeta hopMeta = transMeta.getTransHop( i );
-            if ( hopMeta.getFromStep().equals( stepMeta ) ) {
-              StepMeta toStepMeta = hopMeta.getToStep();
-              if ( toStepMeta.getStepMetaInterface() instanceof MetaInjectMeta ) {
-                MetaInjectMeta toMeta = (MetaInjectMeta) toStepMeta.getStepMetaInterface();
-                Map<TargetStepAttribute, SourceStepField> sourceMapping = toMeta.getTargetSourceMapping();
-                for ( Entry<TargetStepAttribute, SourceStepField> entry : sourceMapping.entrySet() ) {
-                  SourceStepField value = entry.getValue();
-                  if ( value.getStepname().equals( name ) ) {
-                    value.setStepname( stepname );
-                  }
-                }
-
-              }
-
-            }
-          }
-        }
         
         //
         // OK, so the step has changed...
